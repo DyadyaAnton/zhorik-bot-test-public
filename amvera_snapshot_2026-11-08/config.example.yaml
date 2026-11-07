@@ -1,0 +1,26 @@
+# Скопируйте в config.yaml и заполните по результатам изучения DevTools -> Network.
+# Ниже ПРИМЕР формы, URL и поля — заглушки, подставьте реальные.
+queries: [гречка, куриное филе, молоко, яйца, рис, картофель, морковь, масло подсолнечное]
+
+chains:
+  - name: chain_a
+    url: "https://example.com/api/catalog/search"     # найден в Network
+    store_ref: "123"                                    # ID магазина/склада для вашего адреса
+    headers:
+      User-Agent: "Mozilla/5.0 ..."
+      Accept: "application/json"
+    params:
+      q: "{query}"
+      page: "{page}"
+      store: "{store}"
+    items_path: "data.items"        # где в JSON лежит список товаров
+    map:
+      id: "id"
+      name: "title"
+      price: "price.current"
+      promo_price: "price.promo"
+      brand: "brand"
+      url: "url"
+      in_stock: "available"
+      # pack_amount: "weight_g"     # если вес отдаётся отдельным полем
+      # pack_unit: "unit"
