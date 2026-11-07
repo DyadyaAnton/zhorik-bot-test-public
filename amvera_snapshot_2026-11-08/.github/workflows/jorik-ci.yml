@@ -1,0 +1,76 @@
+name: Jorik CI
+
+on:
+  push:
+    branches:
+      - ci/github-actions-setup
+      - amvera-release
+  pull_request:
+    branches:
+      - amvera-release
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jorik-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fast:
+    name: FAST / syntax and smoke import
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Compile Python sources
+        run: python -m compileall -q .
+      - name: Install real application dependencies for startup smoke
+        run: python -m pip install -r requirements.txt
+      - name: Smoke import main and PRICE07 routers without Telegram polling
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python -m unittest -v test_price07_startup_imports
+
+  standard:
+    name: STANDARD / offline prices
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    needs: fast
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install application dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Run deterministic price and SKU tests
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: >-
+          python -m unittest -v
+          test_price07_weekly test_price02_pipeline test_price03_async_guard
+          test_price07_rev2_core test_price07_rev2_normalize
+          test_price07_sku_identity test_price07_sku_review
+          test_price07_sku_bind_ui test_price07_review_migration
+
+  deep:
+    name: DEEP / offline regression
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: standard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install application dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Run full discoverable test suite
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python -m unittest discover -v -p 'test_*.py'
